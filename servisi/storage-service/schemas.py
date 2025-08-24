@@ -1,27 +1,35 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
 
 class SensorCreate(BaseModel):
-    id: str = Field(..., min_length=1, max_length=24)
-    name: Optional[str] = None
+    id: str
+    name: str
+    location: Optional[str] = None
 
+class SensorResponse(BaseModel):
+    id: str 
+    name: str
+    location: Optional[str]
+    created_at: datetime
 
-class SensorOut(BaseModel):
-    id:str
-    name: Optional[str] = None
+    class Config:
+        from_attributes = True
 
-
-class SensorDataIn(BaseModel):
+class SensorDataCreate(BaseModel):
     sensor_id: str
     temperature: float
     aqi: float
-    timestamp: Optional[datetime] = None
+    timestamp : Optional[datetime] = None
 
-class SensorDataOut(BaseModel):
+
+class SensorDataResponse(BaseModel):
     id: int
-    sensor_id : str
-    temperature : float
+    sensor_id: str
+    temperature: float
     aqi: float
     timestamp: datetime
+
+    class Config:
+        from_attributes = True

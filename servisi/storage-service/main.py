@@ -1,94 +1,76 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
-from db import engine, get_db
-from models import Base, Sensor, SensorData
-from schemas import SensorCreate, SensorOut, SensorDataIn, SensorDataOut
+from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime
+from .database import engine, get_db
+from .models import Base, Sensor, SensorData
+from .schemas import (
+    SensorCreate,SensorResponse,
+    SensorDataResponse, SensorDataCreate
+)
 
-
-
-app = FastAPI(title="storage-service", version="0.1.0")
+app = FastAPI(
+    title="Storage Service", 
+    description="Servis za spremanje podataka o senzorima", 
+    version="1.0.1")
 
 @app.on_event("startup")
-async def on_startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+def on_startup():
+    print("Kreiranje tablica...")
+    Base.metadata.create_all(bind=engine)
+    print("Tablice kreirane")    
 
 
 @app.get("/health")
-async def health():
+def health():
     return {"status" : "ok"}
 
 
 
 
-@app.post("/sensors", response_model=SensorOut, status_code=201)
-async def create_sensor(payload: SensorCreate, db: AsyncSession = Depends(get_db)):
-    exists = await db.get(Sensor, payload.id)
-    if exists:
+@app.post("/sensors", response_model=SensorResponse)
+def create_sensor(
+     sensor: SensorCreate, 
+     db: Session = Depends(get_db)
+):
+    db_sensor = db.query(Sensor).filter(Sensor.id == sensor.id).first()
+    if db_sensor:
         raise HTTPException(status_code=400, detail="Senzor vec postoji")
-    s = Sensor(id=payload.id, name=payload.name)
-    db.add(s)
-    await db.commit()
-    await db.refresh(s)
-    return SensorOut.model_validate(s.__dict__)
-
-
-@app.get("/sensors/{sensor_id}", response_model=SensorOut)
-async def get_sensor(sensor_id: str, db: AsyncSession= Depends(get_db)):
-    s = await db.get(Sensor, sensor_id)
-    if not s: 
-        raise HTTPException(status_code=404, detail="Sensor ne postoji")
-    return SensorOut.model_validate(s.__dict__)
-
-
-
-@app.post("/data", response_model=SensorDataOut, status_code=201)
-async def write_data(payload: SensorDataIn, db: AsyncSession= Depends(get_db)):
-    s = await db.get(Sensor, payload.sensor_id)
-
-    if not s:
-        raise HTTPException(status_code=404, detail="Senzor ne postoji")
     
-
-    sd = SensorData(
-        sensor_id= payload.sensor_id, 
-        temperature= payload.temperature,
-        aqi = payload.aqi,
-        timestamp = payload.timestamp,
-    )
-
-    db.add(sd)
-    await db.commit()
-    await db.refresh(sd)
-
-
-    return SensorDataOut(
-        id= sd.id, 
-        sensor_id=sd.sensor_id,
-        temperature=sd.temperature,
-        aqi=sd.aqi,
-        timestamp=sd.timestamp,
-    )
-
-
-@app.get("/data", response_model=List[SensorDataOut])
-async def read_data(sensor_id: str = Query(...), limit: int = Query(100, ge=1, le= 1000), db: AsyncSession = Depends(get_db)):
-    stmt = (
-        select(SensorData)
-        .where(SensorData.sensor_id == sensor_id)
-        .order_by(desc(SensorData.timestamp))
-        .limit(limit)
-        )
     
-    result = await db.execute(stmt)
-    rows = result.scalars().all()
+    db_sensor = Sensor(**sensor.dict())
+    db.add(db_sensor)
+    db.commit()
+    db.refresh(db_sensor)
+    return db_sensor
+
+
+@app.get("/sensors", response_model=List[SensorResponse])
+def list_sensors(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db)  # <-- Svaki endpoint koji koristi DB treba dependency
+):
+    sensors = db.query(Sensor).offset(skip).limit(limit).all()
+    return sensors
+
+
+
+@app.post("/data", response_model=SensorDataResponse)
+def create_sensor_data(
+    data: SensorDataCreate, 
+    db: Session = Depends(get_db)
+):
+    # Verify sensor exists
+    sensor = db.query(Sensor).filter(Sensor.id == data.sensor_id).first()
+    if not sensor:
+        raise HTTPException(status_code=404, detail="Sensor not found")
     
-    return [
-        SensorDataOut(
-            id=r.id, sensor_id=r.sensor_id, temperature=r.temperature, aqi=r.aqi, timestamp=r.timestamp
-        )
-        for r in rows
-    ]
+    # Create data entry
+    db_data = SensorData(**data.dict())
+    db.add(db_data)
+    db.commit()
+    db.refresh(db_data)
+    return db_data
+
 

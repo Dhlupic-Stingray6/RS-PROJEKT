@@ -1,0 +1,6 @@
+rs/
+__pycache__/
+servisi/collector-service/__pycache__
+servisi/storage-service/__pycache__
+*.db
+*.sqlite
