@@ -26,8 +26,6 @@ def health():
     return {"status" : "ok"}
 
 
-
-
 @app.post("/sensors", response_model=SensorResponse)
 def create_sensor(
      sensor: SensorCreate, 
@@ -49,11 +47,18 @@ def create_sensor(
 def list_sensors(
     skip: int = 0, 
     limit: int = 100, 
-    db: Session = Depends(get_db)  # <-- Svaki endpoint koji koristi DB treba dependency
+    db: Session = Depends(get_db)
 ):
     sensors = db.query(Sensor).offset(skip).limit(limit).all()
     return sensors
 
+
+@app.get("/sensors/{sensor_id}", response_model=SensorResponse)
+def get_sensor(sensor_id: str, db: Session = Depends(get_db)):
+    sensor = db.query(Sensor).filter(Sensor.id == sensor_id).first()
+    if not sensor:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    return sensor
 
 
 @app.post("/data", response_model=SensorDataResponse)
@@ -74,3 +79,11 @@ def create_sensor_data(
     return db_data
 
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8001,
+        reload=True
+    )
