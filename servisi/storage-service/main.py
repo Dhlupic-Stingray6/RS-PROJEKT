@@ -78,7 +78,7 @@ def create_sensor_data(
     db.refresh(db_data)
     return db_data
 
-
+"""
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
@@ -87,3 +87,5 @@ if __name__ == "__main__":
         port=8001,
         reload=True
     )
+
+    """
