@@ -51,7 +51,7 @@ class Simulator:
         self.create_sensors()
         
         # Registriraj senzore
-        print(f"📝 Registering {len(self.sensors)} sensors...")
+        print(f" Registering {len(self.sensors)} sensors...")
         for sensor in self.sensors:
             await SensorRegistrar.register_sensor(
                 self.session,
@@ -75,7 +75,7 @@ class Simulator:
                     return False
         except Exception as e:
             self.stats['failed'] += 1
-            print(f"❌ Error sending data: {e}")
+            print(f" Error sending data: {e}")
             return False
     
     async def simulate_sensor(self, sensor: SensorConfig):
@@ -84,7 +84,7 @@ class Simulator:
         success = await self.send_data(data)
         
         if success:
-            print(f"📡 {sensor.sensor_id}: T={data['temperature']}°C, AQI={data['aqi']}")
+            print(f" {sensor.sensor_id}: T={data['temperature']}°C, AQI={data['aqi']}")
         
         return success
     
@@ -98,7 +98,7 @@ class Simulator:
         print("-" * 50)
         
         while self.running:
-            # Parallel sending for all sensors
+            
             tasks = [self.simulate_sensor(sensor) for sensor in self.sensors]
             results = await asyncio.gather(*tasks)
             
@@ -113,7 +113,7 @@ class Simulator:
         if self.session:
             await self.session.close()
         
-        # Print final stats
+        
         runtime = (datetime.utcnow() - self.stats['start_time']).total_seconds()
         print(f"\n statistika:")
         print(f"  Runtime: {runtime:.1f}s")

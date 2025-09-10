@@ -65,7 +65,7 @@ async def process_all_sensors():
             stats = StatisticsCalculator.calculate(sensor_id, data)
             if stats:
                 stats_cache[sensor_id] = stats
-                print(f"✅ {sensor_id}: {stats.data_points} points")
+                print(f" {sensor_id}: {stats.data_points} points")
     
     last_processing_time = datetime.utcnow()
     next_processing_time = last_processing_time + timedelta(seconds=PROCESSING_INTERVAL)
@@ -76,7 +76,7 @@ async def periodic_processing():
         try:
             await process_all_sensors()
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f" Error: {e}")
         
         await asyncio.sleep(PROCESSING_INTERVAL)
 
@@ -99,22 +99,6 @@ async def get_all_stats():
         raise HTTPException(404, "Nema statistika. Pričekajte processing...")
     return list(stats_cache.values())
 
-@app.get("/stats/{sensor_id}", response_model=SensorStats)
-async def get_sensor_stats(sensor_id: str):
-    if sensor_id not in stats_cache:
-        raise HTTPException(404, f"Nema statistike za {sensor_id}")
-    return stats_cache[sensor_id]
-
-@app.post("/process", response_model=ProcessingStatus)
-async def trigger_processing():
-    await process_all_sensors()
-    return ProcessingStatus(
-        status="completed",
-        processed_sensors=len(stats_cache),
-        timestamp=datetime.utcnow(),
-        next_run=next_processing_time
-    )
-
 @app.get("/stats/aggregated", response_model=AggregatedStats)
 async def get_aggregated():
     if not stats_cache:
@@ -131,6 +115,24 @@ async def get_aggregated():
         global_aqi_avg=sum(all_aqis) / len(all_aqis) if all_aqis else 0,
         sensors=list(stats_cache.values())
     )
+
+
+@app.get("/stats/{sensor_id}", response_model=SensorStats)
+async def get_sensor_stats(sensor_id: str):
+    if sensor_id not in stats_cache:
+        raise HTTPException(404, f"Nema statistike za {sensor_id}")
+    return stats_cache[sensor_id]
+
+@app.post("/process", response_model=ProcessingStatus)
+async def trigger_processing():
+    await process_all_sensors()
+    return ProcessingStatus(
+        status="completed",
+        processed_sensors=len(stats_cache),
+        timestamp=datetime.utcnow(),
+        next_run=next_processing_time
+    )
+
 
 @app.get("/trends/{sensor_id}", response_model=TrendAnalysis)
 async def get_trend(sensor_id: str):
@@ -156,6 +158,10 @@ async def get_trend(sensor_id: str):
         last_analysis=stats.last_updated
     )
 
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8003, reload=True)
+
+

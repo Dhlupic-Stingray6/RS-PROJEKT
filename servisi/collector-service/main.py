@@ -49,7 +49,7 @@ async def health():
         status="healthy" if storage_connected else "degraded",
         service="collector",
         storage_connected=storage_connected,
-        version="2.0.0"
+        
     )
 
 @app.post("/ingest", response_model=IngestResponse)
@@ -127,3 +127,5 @@ async def get_stats():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8002, reload=True)
+
+

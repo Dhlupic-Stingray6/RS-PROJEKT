@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from datetime import datetime
-from .database import engine, get_db
-from .models import Base, Sensor, SensorData
-from .schemas import (
+from database import engine, get_db
+from models import Base, Sensor, SensorData
+from schemas import (
     SensorCreate,SensorResponse,
     SensorDataResponse, SensorDataCreate
 )
@@ -78,7 +78,30 @@ def create_sensor_data(
     db.refresh(db_data)
     return db_data
 
-"""
+
+@app.get("/data", response_model=List[SensorDataResponse])
+def get_sensor_data(
+    sensor_id: Optional[str] = Query(None, description="Filter by sensor ID"),
+    limit: int = Query(100, description="Maximum number of results"),
+    skip: int = Query(0, description="Number of results to skip"),
+    db: Session = Depends(get_db)
+):
+    
+    query = db.query(SensorData)
+    
+   
+    if sensor_id:
+        query = query.filter(SensorData.sensor_id == sensor_id)
+    
+   
+    query = query.order_by(SensorData.timestamp.desc())
+    
+    
+    data = query.offset(skip).limit(limit).all()
+    
+    return data
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
@@ -88,4 +111,4 @@ if __name__ == "__main__":
         reload=True
     )
 
-    """
+    

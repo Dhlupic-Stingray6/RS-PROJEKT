@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # Storage-service
+  storage:
+    build: ./servisi/storage-service
+    container_name: storage-service
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=sqlite:///./data/storage.db
+    volumes:
+      - ./data:/app/data
+    networks:
+      - sensor-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Collector-service 
+  collector:
+    build: ./servisi/collector-service
+    container_name: collector-service
+    ports:
+      - "8002:8002"
+    environment:
+      - STORAGE_SERVICE_URL=http://storage:8001
+    depends_on:
+      - storage
+    networks:
+      - sensor-network
+    restart: unless-stopped
+
+  # Processing-service 
+  processing:
+    build: ./servisi/processing-service
+    container_name: processing-service
+    ports:
+      - "8003:8003"
+    environment:
+      - STORAGE_SERVICE_URL=http://storage:8001
+      - PROCESSING_INTERVAL=60
+    depends_on:
+      - storage
+    networks:
+      - sensor-network
+    restart: unless-stopped
+
+  # simulator
+  simulator:
+    build: ./servisi/simulator
+    container_name: simulator
+    environment:
+      - COLLECTOR_URL=http://collector:8002
+      - STORAGE_URL=http://storage:8001
+      - SENSOR_COUNT=10
+      - INTERVAL_SECONDS=5
+    depends_on:
+      - collector
+      - storage
+    networks:
+      - sensor-network
+    restart: unless-stopped
+
+networks:
+  sensor-network:
+    driver: bridge

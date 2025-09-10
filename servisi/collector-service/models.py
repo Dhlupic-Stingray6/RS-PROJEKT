@@ -25,4 +25,4 @@ class HealthResponse(BaseModel):
     status: str
     service: str
     storage_connected: bool
-    version: str
+    
