@@ -60,7 +60,7 @@ class DataValidator:
         """Provjeri konzistentnost podataka"""
         # Provjeri da li su temperatura i AQI u logičnoj korelaciji
         # Npr. visoka temperatura ljeti može biti povezana s višim AQI
-        if data.temperature > 35 and data.aqi < 30:
+        if data.temperature == 0 and data.aqi == 0:
             # Možda je greška u očitanju
             return False
         
@@ -74,4 +74,10 @@ class DataValidator:
             if current_time - data.timestamp > 86400:
                 return False
         
+        if data.temperature < -20 or data.temperature > 50:
+            return False
+
+        if data.aqi < 0 or data.aqi > 300:
+            return False
+
         return True
